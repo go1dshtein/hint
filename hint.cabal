@@ -16,6 +16,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable hint
-  -- main-is:             
+  main-is:           Hint/Executable/Hint.hs
+  hs-source-dirs:    src/haskell/main
   -- other-modules:       
   build-depends:       base ==4.5.*
