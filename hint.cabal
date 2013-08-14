@@ -18,5 +18,5 @@ cabal-version:       >=1.8
 executable hint
   main-is:           Hint/Executable/Hint.hs
   hs-source-dirs:    src/haskell/main
-  -- other-modules:       
-  build-depends:       base >=4.5, cmdargs
+  --other-modules:     Hint/Interpreter/Context.hs  
+  build-depends:       base >=4.5, cmdargs, unix
