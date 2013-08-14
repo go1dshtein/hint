@@ -33,12 +33,12 @@ dispatch arguments
 
 proceedInteractive :: Context -> IO ()
 proceedInteractive context = do
-    installHandler keyboardSignal (Catch (putStrLn "" >> promt)) Nothing
+    installHandler keyboardSignal (Catch (putStrLn "" >> prompt)) Nothing
     putStrLn "Hello!"
     proceedInteractive' context
     where
         proceedInteractive' context = do
-            promt
+            prompt
             eof <- isEOF
             if eof
                 then do
@@ -49,7 +49,7 @@ proceedInteractive context = do
                     let newcontext = proceed context line
                     print newcontext
                     proceedInteractive' newcontext
-        promt = putStr ">> " >> hFlush stdout
+        prompt = putStr ">> " >> hFlush stdout
 
 
 proceedStdIn :: Context -> IO ()
