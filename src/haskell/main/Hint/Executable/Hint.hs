@@ -2,13 +2,23 @@
 module Main (main) where
 
 import Data.List (elem)
-import System.IO (hGetContents, withFile, IOMode(..), isEOF, hFlush, stdout)
+import System.IO
+    ( hGetContents
+    , withFile
+    , IOMode(..)
+    , isEOF
+    , hFlush
+    , hPrint
+    , stdout
+    , stderr)
+import Control.Monad (foldM)
 
 import System.Console.CmdArgs
 import System.Posix.Signals
+import System.Exit
 
 import Hint.Interpreter.Context
-import Hint.Interpreter.Process (proceed)
+import Hint.Interpreter.Process (proceed, (^.))
 
 data Arguments = Arguments
     {
@@ -25,45 +35,62 @@ description = Arguments{filename = [] &= args &= typ "FILE"}
 
 dispatch :: Arguments -> IO ()
 dispatch arguments
-    | filename arguments == []      = proceedInteractive context
+    | null (filename arguments)     = proceedInteractive context
     | elem "-" $ filename arguments = proceedStdIn context
     | otherwise                     = proceedFiles (filename arguments) context
-    where context = getContext
+    where context = Right initial
 
 
-proceedInteractive :: Context -> IO ()
-proceedInteractive context = do
+proceedError :: Either Error Context -> IO ()
+proceedError (Left error) = do
+    hPrint stderr error
+    exitFailure
+
+
+proceedInteractive :: Either Error Context -> IO ()
+proceedInteractive (Left error) = proceedError (Left error)
+proceedInteractive (Right context) = do
     installHandler keyboardSignal (Catch (putStrLn "" >> prompt)) Nothing
-    putStrLn "Hello!"
-    proceedInteractive' context
+    putStrLn $ context^.environment.welcome
+    proceedInteractive' (Right context)
     where
-        proceedInteractive' context = do
-            prompt
+        proceedInteractive' (Left error) = proceedError (Left error)
+        proceedInteractive' (Right context) = do
+            putStr $ context^.output
+            putStr $ context^.promptString
+            hFlush stdout
             eof <- isEOF
             if eof
                 then do
-                    print context
-                    putStrLn "Goodbye!"
+                    putStrLn $ context^.environment.farewell
+                    exitSuccess
                 else do
                     line <- getLine
-                    let newcontext = proceed context line
-                    print newcontext
-                    proceedInteractive' newcontext
-        prompt = putStr ">> " >> hFlush stdout
+                    proceedInteractive' $ proceed line context
+        prompt = putStr (context^.environment.promptLarge) >> hFlush stdout
 
 
-proceedStdIn :: Context -> IO ()
-proceedStdIn context = do
+proceedStdIn :: Either Error Context -> IO ()
+proceedStdIn (Left error) = proceedError (Left error)
+proceedStdIn (Right context) = do
     input <- getContents
-    print $ foldl proceed context $ lines input
+    result $ foldM (flip proceed) context $ lines input
+    where
+        result (Left error) = proceedError (Left error)
+        result (Right context) = do
+            putStr $ context^.output
+            exitSuccess
 
 
-proceedFiles ::  [String] -> Context -> IO ()
-proceedFiles [] context = print context
-proceedFiles (filename:filenames) context =
+proceedFiles ::  [String] -> Either Error Context -> IO ()
+proceedFiles _ (Left error) = proceedError (Left error)
+proceedFiles [] (Right context) = do
+    putStr $ context^.output
+    exitSuccess
+proceedFiles (filename:filenames) (Right context) =
     withFile filename ReadMode $ \handler -> do
         file <- hGetContents handler
-        proceedFiles filenames $ foldl proceed context $ lines file
+        proceedFiles filenames $ foldM (flip proceed) context $ lines file
 
 
 main :: IO ()
