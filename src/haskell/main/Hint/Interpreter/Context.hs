@@ -17,6 +17,8 @@ module Hint.Interpreter.Context
     , farewell
     , promptLarge
     , promptSmall
+    , message
+    , context
     ) where
 
 import Control.Lens hiding (Context)
@@ -42,16 +44,18 @@ data Context = Context
     } deriving (Show)
 
 data Error = Error
-    { message :: String
-    , context :: Context
+    { _message :: String
+    , _context :: Context
     }
-
-instance Show Error where
-    show Error {message = message, context = context} =
-        "ERROR: " ++ message ++ "\nCONTEXT: " ++ show context
 
 makeLenses ''Context
 makeLenses ''Environment
+makeLenses ''Error
+
+instance Show Error where
+    show e =
+        "ERROR: " ++ (e^.message) ++
+        "\nCONTEXT: " ++ show (e^.context)
 
 initial :: Context
 initial = Context
@@ -70,7 +74,7 @@ initial = Context
 
 raise :: String -> Context -> Error
 raise string c = Error
-    { message = string
-    , context = c
+    { _message = string
+    , _context = c
     }
 

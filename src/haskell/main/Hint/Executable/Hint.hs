@@ -49,12 +49,14 @@ proceedError (Left error) = do
 
 proceedInteractive :: Either Error Context -> IO ()
 proceedInteractive (Left error) = proceedError (Left error)
-proceedInteractive (Right context) = do
+proceedInteractive (Right context') = do
     installHandler keyboardSignal (Catch (putStrLn "" >> prompt)) Nothing
-    putStrLn $ context^.environment.welcome
-    proceedInteractive' (Right context)
+    putStrLn $ context'^.environment.welcome
+    proceedInteractive' (Right context')
     where
-        proceedInteractive' (Left error) = proceedError (Left error)
+        proceedInteractive' (Left error) = do
+            hPrint stderr error
+            proceedInteractive' (Right (error^.context))
         proceedInteractive' (Right context) = do
             putStr $ context^.output
             putStr $ context^.promptString
@@ -67,7 +69,7 @@ proceedInteractive (Right context) = do
                 else do
                     line <- getLine
                     proceedInteractive' $ proceed line context
-        prompt = putStr (context^.environment.promptLarge) >> hFlush stdout
+        prompt = putStr (context'^.environment.promptLarge) >> hFlush stdout
 
 
 proceedStdIn :: Either Error Context -> IO ()

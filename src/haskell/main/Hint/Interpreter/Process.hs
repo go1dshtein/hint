@@ -27,11 +27,11 @@ perform context = (output != show (length (context^.command))) context
 proceedCommand :: String -> Context -> WithError Context
 proceedCommand string context =
     (command ++= string) context >>=
+    promptString != (context^.environment.promptLarge) >>=
     (\c -> (history ++~ (c^.command)) c) >>=
     perform >>=
     output ++~ '\n' >>=
-    command != "" >>=
-    promptString != (context^.environment.promptLarge)
+    command != ""
 
 waitForEnd :: String -> Context -> WithError Context
 waitForEnd string context =
